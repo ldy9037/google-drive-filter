@@ -8,6 +8,7 @@ from googleapiclient.errors import HttpError
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/drive"]
+FILTER = "[bMtMPqp].stop"
 
 def main():
     stack = []
@@ -78,7 +79,7 @@ def get_files(drive_id, folder_id):
         results = (
             service.files()
             .list(
-                q="'" + folder_id + "' in parents and trashed=false and name contains '[bMtMPqp].stop'",
+                q="'" + folder_id + "' in parents and trashed=false and name contains '" + FILTER + "'",
                 corpora="drive",
                 driveId=drive_id,
                 includeItemsFromAllDrives=True,
