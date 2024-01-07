@@ -8,7 +8,31 @@ from googleapiclient.errors import HttpError
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/drive"]
-FILTER = "[bMtMPqp].stop"
+FILTER = "Test"
+
+def delete_encrypted_version():
+  drives = get_drives()
+  
+  page_token = None
+  for drive in drives:
+    if drive['name'] == "Test-drive":
+      while True:
+        files = get_files(drive['id'], page_token)
+        page_token = files['nextPageToken']
+          
+        for file in files['files']:
+            print(f"{file['name']}")
+      
+            revisions = get_revisions(file['id'])    
+            for revision in revisions['revisions']:
+                print(f"{revision['id']} : {revision['modifiedTime']}")
+            
+            if len(revisions['revisions']) >= 2:
+                print("ttt")
+                delete_revision(file['id'], revisions['revisions'][-1]['id'])
+                
+        if not page_token:
+            break
 
 def restore():
   drives = get_drives()
@@ -17,38 +41,31 @@ def restore():
   for drive in drives:
     while True:    
       files = get_deleted_files(drive['id'], page_token)
-      
-      if not page_token:
-        page_token = files['nextPageToken']
-      
-      if not files['files']:
-          break
+      page_token = files['nextPageToken']    
         
       for file in files['files']:
           print(f"{file['name']}")
           restore_files(drive['id'], file['id'])
           
+      if not page_token:
+          break
+          
 def delete():
   drives = get_drives()
-  count = 0
   
   page_token = None
   for drive in drives:
-    while True:    
-      files = get_files(drive['id'], page_token)
-      
-      if not page_token:
-        page_token = files['nextPageToken']
-      
-      if not files['files']:
-          break
-        
-      for file in files['files']:
-          print(f"{file['name']}")
-          deleted_file = delete_files(drive['id'], file['id'])
-          count += 1
+    if drive['name'] == "N/W 인프라 개선사업":
+      while True:    
+        files = get_files(drive['id'], page_token)
+        page_token = files['nextPageToken']  
           
-  print("총 삭제된 파일 수 : " + count)
+        for file in files['files']:
+            print(f"{file['name']}")
+            deleted_file = delete_files(drive['id'], file['id'])
+        
+        if not page_token:
+            break
         
 def _credentials():
   """Shows basic usage of the Drive v3 API.
@@ -152,8 +169,7 @@ def get_files(drive_id, page_token):
             .execute()
         )
         result['files'] = results.get("files", [])
-        result['nextPageToken'] = results.get("nextPageToken", None)
-
+        result['nextPageToken'] = results.get("nextPageToken")
     except HttpError as error:
         print(f"An error occurred: {error}")
 
@@ -190,5 +206,45 @@ def get_deleted_files(drive_id, pageToken):
 
   return result
 
+def get_revisions(file_id):
+    result = {
+      'revisions' : []
+    }
+
+    try:
+        service = build("drive", "v3", credentials=_credentials())
+
+        results = (
+            service.revisions()
+            .list(
+                fileId=file_id,
+                fields="revisions(id, modifiedTime)"
+            )
+            .execute()
+        )
+        print(results)
+        result['revisions'] = results.get("revisions", [])
+        
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+
+    return result
+
+def delete_revision(file_id, revision_id):
+    try:
+        service = build("drive", "v3", credentials=_credentials())
+
+        results = (
+            service.revisions()
+            .delete(
+                fileId=file_id,
+                revisionId=revision_id
+            )
+            .execute()
+        )
+        
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+
 if __name__ == "__main__":
-  delete()
+  delete_encrypted_version()
